@@ -60,3 +60,38 @@ test('GET /api/student/dashboard should fail without student token', async () =>
     server.close();
   }
 });
+
+
+test('POST /api/auth/login should validate required credentials', async () => {
+  const { server, baseUrl } = await startTestServer();
+  try {
+    const response = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    assert.equal(response.status, 400);
+    const data = await response.json();
+    assert.equal(data.message, 'Email or registration number and password are required');
+  } finally {
+    server.close();
+  }
+});
+
+test('POST /api/auth/reset-password should validate required fields', async () => {
+  const { server, baseUrl } = await startTestServer();
+  try {
+    const response = await fetch(`${baseUrl}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ regNumber: '123456' }),
+    });
+
+    assert.equal(response.status, 400);
+    const data = await response.json();
+    assert.equal(data.message, 'Registration number, OTP and new password are required');
+  } finally {
+    server.close();
+  }
+});

@@ -12,6 +12,8 @@ const submissionSchema = new mongoose.Schema({
   student: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   answers: [answerSchema],
   totalMarks: Number,
+  maxMarks: Number,
+  percentage: Number,
   graded: { type: Boolean, default: false },
   submittedAt: { type: Date, default: Date.now },
 });

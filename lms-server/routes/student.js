@@ -21,6 +21,7 @@ router.get('/dashboard', studentController.dashboard);
 router.get('/profile', studentController.profile);
 // Study Bot
 router.get('/study-bot', studentController.studyBot);
+router.post('/study-bot', studentController.studyBot);
 // Timetable
 router.get('/timetable', studentController.timetable);
 // Student messages from teachers
