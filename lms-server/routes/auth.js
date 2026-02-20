@@ -4,6 +4,7 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const { authenticateJWT } = require('../middleware/auth');
 
 // Helper: send email (replace with your SMTP config)
 const sendEmail = async (to, subject, text) => {
@@ -35,7 +36,7 @@ router.post('/login', async (req, res) => {
     if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
     const token = jwt.sign(
       { id: user._id, role: user.role, registrationNumber: user.registrationNumber },
-      process.env.JWT_SECRET || 'secret',
+      process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
     res.json({
@@ -117,13 +118,20 @@ router.post('/reset-password', async (req, res) => {
 });
 
 // Change password (for logged-in user)
-router.post('/change-password', async (req, res) => {
-  const { userId, currentPassword, newPassword } = req.body;
+router.post('/change-password', authenticateJWT, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ message: 'Current password and new password are required' });
+  }
+
   try {
-    const user = await User.findById(userId);
+    const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
+
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) return res.status(401).json({ message: 'Current password is incorrect' });
+
     user.password = await bcrypt.hash(newPassword, 10);
     await user.save();
     res.json({ message: 'Password changed successfully' });
