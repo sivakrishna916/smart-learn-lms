@@ -50,7 +50,7 @@ exports.createFirstAdmin = async (req, res) => {
     });
   } catch (err) {
     console.error('CreateFirstAdmin error:', err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
@@ -91,10 +91,11 @@ exports.createTeacher = async (req, res) => {
         Name: ${name}
         Email: ${email}
         Registration Number: ${registrationNumber}
+        Password: ${password}
         Role: Teacher
         
-        Your account has been created by an administrator.
-        For security, please use the password reset flow on first login to set your own password.
+        You can now log in to your account using your email or registration number and the above password.
+        For security, please change your password after your first login.
         
         Best regards,
         LMS Administration Team
@@ -113,7 +114,7 @@ exports.createTeacher = async (req, res) => {
     });
   } catch (err) {
     console.error('CreateTeacher error:', err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
@@ -122,7 +123,7 @@ exports.listTeachers = async (req, res) => {
     const teachers = await User.find({ role: 'teacher' }).select('-password -otp -otpExpires');
     res.json(teachers);
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
@@ -131,7 +132,7 @@ exports.listStudents = async (req, res) => {
     const students = await User.find({ role: 'student' }).select('-password -otp -otpExpires');
     res.json(students);
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
@@ -177,7 +178,7 @@ exports.assignCourse = async (req, res) => {
     res.json({ message: 'Course assigned', course });
   } catch (err) {
     console.error('AssignCourse error:', err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
@@ -215,7 +216,7 @@ exports.assignTimetable = async (req, res) => {
     res.json({ message: 'Timetable assigned', timetable });
   } catch (err) {
     console.error('AssignTimetable error:', err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
@@ -225,7 +226,7 @@ exports.uploadResource = async (req, res) => {
     // This can be extended as needed
     res.json({ message: 'Resource uploaded (not implemented)' });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
@@ -236,7 +237,7 @@ exports.monitor = async (req, res) => {
     const timetableCount = await Timetable.countDocuments();
     res.json({ userCount, courseCount, timetableCount });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
@@ -250,7 +251,7 @@ exports.createCourse = async (req, res) => {
     res.status(201).json({ message: 'Course created', course });
   } catch (err) {
     console.error('CreateCourse error:', err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
@@ -264,7 +265,7 @@ exports.listCourses = async (req, res) => {
     res.json({ courses });
   } catch (err) {
     console.error('ListCourses error:', err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
@@ -280,7 +281,7 @@ exports.updateUser = async (req, res) => {
     await user.save();
     res.json({ message: 'User updated', user });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
@@ -291,6 +292,6 @@ exports.deleteUser = async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json({ message: 'User deleted' });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 }; 

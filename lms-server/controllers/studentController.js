@@ -5,7 +5,6 @@ const { sendEmail } = require('../utils/email');
 const Course = require('../models/Course');
 const Timetable = require('../models/Timetable');
 const Message = require('../models/Message');
-const { generateStudyGuidance } = require('../utils/aiTutor');
 
 function generateRegistrationNumber() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -157,38 +156,8 @@ exports.profile = async (req, res) => {
 };
 
 exports.studyBot = async (req, res) => {
-  try {
-    const studentId = req.user.id;
-    const question = (req.body?.question || req.query?.question || 'Help me create a study plan for this week').trim();
-
-    const student = await User.findById(studentId).select('name');
-    const courses = await Course.find({ students: studentId }).select('title');
-    const timetables = await Timetable.find({ students: studentId }).populate('course', 'title');
-
-    const upcomingClasses = timetables
-      .flatMap((timetable) => (timetable.schedule || []).map((slot) => `${timetable.course?.title || 'Course'} - ${slot.day} ${slot.startTime}-${slot.endTime}`))
-      .slice(0, 8);
-
-    const guidance = await generateStudyGuidance({
-      question,
-      studentName: student?.name || 'Student',
-      courses,
-      upcomingClasses,
-    });
-
-    res.json({
-      question,
-      source: guidance.source,
-      answer: guidance.answer,
-      context: {
-        courseCount: courses.length,
-        upcomingClassCount: upcomingClasses.length,
-      },
-    });
-  } catch (err) {
-    console.error('StudyBot error:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
+  // TODO: Fetch or update study bot notes
+  res.json({ message: 'Study bot notes (placeholder)' });
 };
 
 exports.timetable = async (req, res) => {

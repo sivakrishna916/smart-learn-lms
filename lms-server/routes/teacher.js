@@ -16,7 +16,6 @@ router.post('/verify-otp', teacherController.verifyOtp);
 router.get('/student-tests', authenticateJWT, authorizeRoles('student', 'teacher', 'admin'), testController.getStudentTests);
 router.post('/submit-test', authenticateJWT, authorizeRoles('student'), testController.submitTest);
 router.get('/student-results', authenticateJWT, authorizeRoles('student', 'teacher', 'admin'), testController.getStudentResults);
-router.get('/performance', authenticateJWT, authorizeRoles('student'), testController.getStudentPerformance);
 
 // Protect all routes below (teacher/admin only)
 router.use(authenticateJWT, authorizeRoles('teacher', 'admin'));
@@ -48,6 +47,5 @@ router.post('/publish-test', testController.publishTest);
 router.get('/tests', testController.getTeacherTests); // for teachers
 router.post('/grade-submission', testController.gradeSubmission); // for teachers
 router.get('/results', testController.getTeacherResults); // for teachers
-router.get('/performance-summary', testController.getTeacherPerformance); // for teachers
 
 module.exports = router; 

@@ -3,23 +3,28 @@ const router = express.Router();
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 const { authenticateJWT } = require('../middleware/auth');
 
-// Helper: send email using shared utility
-const { sendEmail } = require('../utils/email');
-
-function sendServerError(res, err, context) {
-  console.error(`${context}:`, err);
-  return res.status(500).json({ message: 'Server error' });
-}
+// Helper: send email (replace with your SMTP config)
+const sendEmail = async (to, subject, text) => {
+  // Configure your SMTP here
+  const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST || 'smtp.example.com',
+    port: process.env.EMAIL_PORT || 587,
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER || 'user@example.com',
+      pass: process.env.EMAIL_PASS || 'password',
+    },
+  });
+  await transporter.sendMail({ from: process.env.EMAIL_USER, to, subject, text });
+};
 
 // Login route
 router.post('/login', async (req, res) => {
   const { email, regNumber, password } = req.body;
   try {
-    if ((!email && !regNumber) || !password) {
-      return res.status(400).json({ message: 'Email or registration number and password are required' });
-    }
     const user = await User.findOne({
       $or: [
         { email: email || undefined },
@@ -45,7 +50,7 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (err) {
-    sendServerError(res, err, 'Auth route error')
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
@@ -72,7 +77,7 @@ router.post('/register', async (req, res) => {
     });
     res.status(201).json({ message: 'Registration successful', registrationNumber });
   } catch (err) {
-    sendServerError(res, err, 'Auth route error')
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
@@ -89,7 +94,7 @@ router.post('/forgot-password', async (req, res) => {
     await sendEmail(email, 'LMS Password Reset OTP', `Your OTP is: ${otp}`);
     res.json({ message: 'OTP sent to email' });
   } catch (err) {
-    sendServerError(res, err, 'Auth route error')
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
@@ -97,9 +102,6 @@ router.post('/forgot-password', async (req, res) => {
 router.post('/reset-password', async (req, res) => {
   const { regNumber, otp, newPassword } = req.body;
   try {
-    if (!regNumber || !otp || !newPassword) {
-      return res.status(400).json({ message: 'Registration number, OTP and new password are required' });
-    }
     const user = await User.findOne({ registrationNumber: regNumber });
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (!user.otp || !user.otpExpires || user.otp !== otp || user.otpExpires < Date.now()) {
@@ -111,7 +113,7 @@ router.post('/reset-password', async (req, res) => {
     await user.save();
     res.json({ message: 'Password reset successful' });
   } catch (err) {
-    sendServerError(res, err, 'Auth route error')
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
@@ -134,7 +136,7 @@ router.post('/change-password', authenticateJWT, async (req, res) => {
     await user.save();
     res.json({ message: 'Password changed successfully' });
   } catch (err) {
-    sendServerError(res, err, 'Auth route error')
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
