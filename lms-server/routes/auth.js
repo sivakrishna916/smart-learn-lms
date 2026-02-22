@@ -3,27 +3,16 @@ const router = express.Router();
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
+const { sendEmail } = require('../utils/email');
 const { authenticateJWT } = require('../middleware/auth');
 
-// Helper: send email (replace with your SMTP config)
-const sendEmail = async (to, subject, text) => {
-  // Configure your SMTP here
-  const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.example.com',
-    port: process.env.EMAIL_PORT || 587,
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_USER || 'user@example.com',
-      pass: process.env.EMAIL_PASS || 'password',
-    },
-  });
-  await transporter.sendMail({ from: process.env.EMAIL_USER, to, subject, text });
-};
-
-// Login route
 router.post('/login', async (req, res) => {
   const { email, regNumber, password } = req.body;
+
+  if ((!email && !regNumber) || !password) {
+    return res.status(400).json({ message: 'Email or registration number and password are required' });
+  }
+
   try {
     const user = await User.findOne({
       $or: [
@@ -32,13 +21,16 @@ router.post('/login', async (req, res) => {
       ]
     });
     if (!user) return res.status(404).json({ message: 'User not found' });
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
+
     const token = jwt.sign(
       { id: user._id, role: user.role, registrationNumber: user.registrationNumber },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
+
     res.json({
       token,
       user: {
@@ -50,24 +42,26 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error('Auth login error:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Register route (for students)
 router.post('/register', async (req, res) => {
   const { name, email, password } = req.body;
   try {
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'All fields are required' });
     }
+
     const existing = await User.findOne({ email });
     if (existing) {
       return res.status(409).json({ message: 'Email already registered' });
     }
+
     const registrationNumber = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({
+    await User.create({
       name,
       email,
       password: hashedPassword,
@@ -75,49 +69,61 @@ router.post('/register', async (req, res) => {
       role: 'student',
       emailVerified: true
     });
+
     res.status(201).json({ message: 'Registration successful', registrationNumber });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error('Auth register error:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Forgot password (send OTP)
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
+  if (!email) return res.status(400).json({ message: 'Email is required' });
+
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: 'User not found' });
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.otp = otp;
-    user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    user.otpExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
+
     await sendEmail(email, 'LMS Password Reset OTP', `Your OTP is: ${otp}`);
     res.json({ message: 'OTP sent to email' });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error('Auth forgot-password error:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Reset password (with OTP)
 router.post('/reset-password', async (req, res) => {
   const { regNumber, otp, newPassword } = req.body;
+
+  if (!regNumber || !otp || !newPassword) {
+    return res.status(400).json({ message: 'Registration number, OTP, and new password are required' });
+  }
+
   try {
     const user = await User.findOne({ registrationNumber: regNumber });
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (!user.otp || !user.otpExpires || user.otp !== otp || user.otpExpires < Date.now()) {
       return res.status(400).json({ message: 'Invalid or expired OTP' });
     }
+
     user.password = await bcrypt.hash(newPassword, 10);
     user.otp = undefined;
     user.otpExpires = undefined;
     await user.save();
+
     res.json({ message: 'Password reset successful' });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error('Auth reset-password error:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Change password (for logged-in user)
 router.post('/change-password', authenticateJWT, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
@@ -136,8 +142,9 @@ router.post('/change-password', authenticateJWT, async (req, res) => {
     await user.save();
     res.json({ message: 'Password changed successfully' });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error('Auth change-password error:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-module.exports = router; 
+module.exports = router;

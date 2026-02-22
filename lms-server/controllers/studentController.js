@@ -5,6 +5,7 @@ const { sendEmail } = require('../utils/email');
 const Course = require('../models/Course');
 const Timetable = require('../models/Timetable');
 const Message = require('../models/Message');
+const { getStudyHelp } = require('../utils/aiTutor');
 
 function generateRegistrationNumber() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -156,8 +157,29 @@ exports.profile = async (req, res) => {
 };
 
 exports.studyBot = async (req, res) => {
-  // TODO: Fetch or update study bot notes
-  res.json({ message: 'Study bot notes (placeholder)' });
+  try {
+    const prompt = req.body?.prompt || req.query?.prompt || 'How should I prepare this week?';
+    const studentId = req.user.id;
+
+    const courses = await Course.find({ students: studentId }).select('title');
+    const timetables = await Timetable.find({ students: studentId }).select('schedule');
+
+    const context = {
+      courses: courses.map((course) => course.title),
+      nextClass: timetables[0]?.schedule?.[0]?.day || 'your next class',
+    };
+
+    const coaching = await getStudyHelp({ prompt, context });
+    res.json({
+      source: coaching.source,
+      prompt,
+      answer: coaching.answer,
+      context,
+    });
+  } catch (err) {
+    console.error('Study bot error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
 
 exports.timetable = async (req, res) => {
