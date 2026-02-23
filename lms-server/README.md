@@ -26,6 +26,73 @@ The backend API server for the Learning Management System built with Node.js, Ex
 
 ## ✨ Features
 
+## 🧭 Project Overview
+
+Smart Learn LMS is a role-aware backend API for students, teachers, and administrators. It handles secure authentication, course/timetable management, assessments, and messaging while enforcing strict role-based access at the route level.
+
+## 🏗 Architecture Diagram
+
+```text
+Frontend (React/Vite)
+        |
+        v
+Backend API (Express + JWT + RBAC)
+        |
+        v
+Database (MongoDB + Mongoose)
+```
+
+## 🔄 Authentication Flow
+
+1. User submits credentials to a role-specific login route.
+2. Server validates credentials and signs a JWT with user id + role.
+3. Client sends JWT in `Authorization: Bearer <token>`.
+4. `authenticateJWT` verifies signature and injects `req.user`.
+5. `authorizeRoles(...)` enforces route-level permissions.
+
+## 🔐 Security Features
+
+- JWT Authentication
+- Role-Based Access Control (RBAC)
+- Environment Variable Protection (startup validation + no JWT fallback secret)
+- First Admin Bootstrap Protection (`/api/admin/create-first-admin` only works if no admin exists)
+- Rate limiting for login endpoints
+- Input validation for auth/password flows
+- Centralized error handling and structured request/error logging
+- Secure HTTP headers middleware (helmet-equivalent hardening)
+- Mongo query/body sanitization against operator injection
+- CORS restriction with environment-based client allowlist
+
+## 🛡 Security Architecture
+
+```text
+Request
+  -> CORS policy check
+  -> Secure headers middleware
+  -> Mongo input sanitization
+  -> JWT authentication (where required)
+  -> Role authorization (RBAC)
+  -> Route controller
+  -> Centralized error handler
+```
+
+## 🧠 Threat Mitigation
+
+- Prevented privilege escalation by binding sensitive operations to JWT identity (`req.user.id`).
+- Eliminated fallback JWT secret usage by failing fast when `JWT_SECRET` is missing.
+- Enforced role-based access for admin router via middleware at router level.
+- Added login rate limiting to reduce brute-force attack surface.
+- Sanitized request body/query/params to block NoSQL operator injection payloads.
+
+## 🔒 Sample Protected Route
+
+```js
+router.use(authenticateJWT, authorizeRoles('admin'));
+router.get('/teachers', adminController.listTeachers);
+```
+
+All routes after `router.use(...)` are protected and require a valid admin token.
+
 ### 🔐 Authentication & Authorization
 - **JWT-based Authentication**: Secure token-based sessions
 - **Role-Based Access Control**: Student, Teacher, Admin permissions
@@ -178,8 +245,11 @@ lms-server/
 │   └── admin.js              # Admin routes
 ├── middleware/                # Custom middleware
 │   ├── auth.js               # JWT authentication
-│   ├── upload.js             # File upload middleware
-│   └── validation.js         # Input validation
+│   ├── requestLogger.js      # Structured request logging
+│   ├── rateLimit.js          # Login rate limiting
+│   ├── mongoSanitize.js      # NoSQL injection sanitization
+│   ├── secureHeaders.js      # Security headers hardening
+│   └── errorHandler.js       # Centralized error handling
 ├── utils/                     # Helper functions
 │   ├── email.js              # Email utilities
 │   ├── password.js           # Password utilities

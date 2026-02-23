@@ -10,7 +10,7 @@ exports.createFirstAdmin = async (req, res) => {
     // Check if any admin exists
     const existingAdmin = await User.findOne({ role: 'admin' });
     if (existingAdmin) {
-      return res.status(400).json({ message: 'Admin already exists' });
+      return res.status(403).json({ message: 'Bootstrap disabled: admin already exists' });
     }
 
     const { name, email, password } = req.body;
