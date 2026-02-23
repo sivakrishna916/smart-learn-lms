@@ -5,6 +5,7 @@ const Message = require('../models/Message');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { sendEmail } = require('../utils/email');
+const { getJwtSecretOrThrow } = require('../utils/jwt');
 
 // Test and Results controller for teachers, students, and admin
 const Test = require('../models/Test');
@@ -26,7 +27,7 @@ exports.login = async (req, res) => {
     }
     const token = jwt.sign(
       { id: user._id, role: user.role, registrationNumber: user.registrationNumber },
-      process.env.JWT_SECRET,
+      getJwtSecretOrThrow(),
       { expiresIn: '7d' }
     );
     res.json({

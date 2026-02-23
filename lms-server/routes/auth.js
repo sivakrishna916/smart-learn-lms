@@ -5,8 +5,37 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { sendEmail } = require('../utils/email');
 const { authenticateJWT } = require('../middleware/auth');
+const { getJwtSecretOrThrow } = require('../utils/jwt');
 
-router.post('/login', async (req, res) => {
+function validateRequiredFields(requiredFields) {
+  return (req, res, next) => {
+    const missing = requiredFields.filter((field) => {
+      const value = req.body[field];
+      return value === undefined || value === null || value === '';
+    });
+
+    if (missing.length > 0) {
+      return res.status(400).json({ message: `Missing required fields: ${missing.join(', ')}` });
+    }
+
+    next();
+  };
+}
+
+function validatePasswordStrength(req, res, next) {
+  if (!req.body.newPassword && !req.body.password) {
+    return next();
+  }
+
+  const password = req.body.newPassword || req.body.password;
+  if (String(password).length < 8) {
+    return res.status(400).json({ message: 'Password must be at least 8 characters long' });
+  }
+
+  next();
+}
+
+router.post('/login', validateRequiredFields(['password']), async (req, res) => {
   const { email, regNumber, password } = req.body;
 
   if ((!email && !regNumber) || !password) {
@@ -27,7 +56,7 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       { id: user._id, role: user.role, registrationNumber: user.registrationNumber },
-      process.env.JWT_SECRET,
+      getJwtSecretOrThrow(),
       { expiresIn: '7d' }
     );
 
@@ -47,7 +76,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.post('/register', async (req, res) => {
+router.post('/register', validateRequiredFields(['name', 'email', 'password']), validatePasswordStrength, async (req, res) => {
   const { name, email, password } = req.body;
   try {
     if (!name || !email || !password) {
@@ -77,7 +106,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', validateRequiredFields(['email']), async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ message: 'Email is required' });
 
@@ -98,7 +127,7 @@ router.post('/forgot-password', async (req, res) => {
   }
 });
 
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', validateRequiredFields(['regNumber', 'otp', 'newPassword']), validatePasswordStrength, async (req, res) => {
   const { regNumber, otp, newPassword } = req.body;
 
   if (!regNumber || !otp || !newPassword) {
@@ -124,7 +153,7 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
-router.post('/change-password', authenticateJWT, async (req, res) => {
+router.post('/change-password', authenticateJWT, validateRequiredFields(['currentPassword', 'newPassword']), validatePasswordStrength, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
   if (!currentPassword || !newPassword) {
