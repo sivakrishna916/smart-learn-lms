@@ -6,6 +6,7 @@ const Course = require('../models/Course');
 const Timetable = require('../models/Timetable');
 const Message = require('../models/Message');
 const { getStudyHelp } = require('../utils/aiTutor');
+const { getJwtSecretOrThrow } = require('../utils/jwt');
 
 function generateRegistrationNumber() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -56,7 +57,7 @@ exports.login = async (req, res) => {
     }
     const token = jwt.sign(
       { id: user._id, role: user.role, registrationNumber: user.registrationNumber },
-      process.env.JWT_SECRET,
+      getJwtSecretOrThrow(),
       { expiresIn: '7d' }
     );
     res.json({
