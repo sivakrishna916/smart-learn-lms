@@ -2,7 +2,11 @@ const mongoose = require('mongoose');
 
 async function connectDatabase(mongoUri) {
   try {
-    await mongoose.connect(mongoUri);
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      family: 4
+    });
     console.log('MongoDB connected successfully');
     return true;
   } catch (error) {
