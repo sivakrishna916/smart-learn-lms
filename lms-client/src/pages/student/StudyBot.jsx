@@ -1,265 +1,367 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
-import Loader from '../../components/shared/Loader';
+
+const TypingDots = () => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 0' }}>
+    {[0, 1, 2].map(i => (
+      <div key={i} style={{
+        width: '8px', height: '8px', borderRadius: '50%',
+        background: '#6366f1',
+        animation: 'bounce 1.2s infinite',
+        animationDelay: `${i * 0.2}s`
+      }} />
+    ))}
+  </div>
+);
+
+const Message = ({ msg }) => {
+  const isUser = msg.role === 'user';
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: isUser ? 'flex-end' : 'flex-start',
+      marginBottom: '16px',
+      animation: 'fadeSlideIn 0.3s ease',
+    }}>
+      {!isUser && (
+        <div style={{
+          width: '36px', height: '36px', borderRadius: '50%',
+          background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '16px', marginRight: '10px', flexShrink: 0,
+          boxShadow: '0 2px 8px rgba(99,102,241,0.4)'
+        }}>🤖</div>
+      )}
+      <div style={{
+        maxWidth: '70%',
+        padding: '12px 16px',
+        borderRadius: isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+        background: isUser
+          ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
+          : '#f8f7ff',
+        color: isUser ? '#fff' : '#1e1b4b',
+        fontSize: '14px',
+        lineHeight: '1.6',
+        boxShadow: isUser
+          ? '0 4px 12px rgba(99,102,241,0.3)'
+          : '0 2px 8px rgba(0,0,0,0.06)',
+        whiteSpace: 'pre-wrap',
+        border: isUser ? 'none' : '1px solid #e8e5ff',
+      }}>
+        {msg.content}
+        <div style={{
+          fontSize: '11px',
+          marginTop: '6px',
+          opacity: 0.6,
+          textAlign: isUser ? 'right' : 'left'
+        }}>
+          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </div>
+      </div>
+      {isUser && (
+        <div style={{
+          width: '36px', height: '36px', borderRadius: '50%',
+          background: 'linear-gradient(135deg, #f59e0b, #ef4444)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '16px', marginLeft: '10px', flexShrink: 0,
+        }}>👤</div>
+      )}
+    </div>
+  );
+};
+
+const SUGGESTIONS = [
+  "Explain recursion in simple terms",
+  "How do I prepare for exams effectively?",
+  "What is object-oriented programming?",
+  "Give me a study plan for this week",
+  "Explain the difference between stack and queue",
+];
 
 export default function StudyBot() {
   const { token } = useAuth();
-  const [notes, setNotes] = useState([]);
-  const [reminders, setReminders] = useState([]);
-  const [newNote, setNewNote] = useState('');
-  const [newReminder, setNewReminder] = useState('');
-  const [reminderDate, setReminderDate] = useState('');
+  const [messages, setMessages] = useState([
+    {
+      role: 'assistant',
+      content: "Hi! I'm your AI Study Assistant 🎓\n\nI can help you understand concepts, create study plans, answer questions about your courses, and much more.\n\nWhat would you like to learn today?",
+      timestamp: new Date(),
+    }
+  ]);
+  const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('notes');
+  const bottomRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
-    fetchNotes();
-    fetchReminders();
-  }, []);
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
 
-  const fetchNotes = async () => {
-    try {
-      const response = await api.get('/student/notes', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setNotes(response.data || []);
-    } catch (error) {
-      console.log('No notes found or error fetching notes');
-      setNotes([]);
-    }
-  };
+  const sendMessage = async (text) => {
+    const prompt = text || input.trim();
+    if (!prompt || loading) return;
 
-  const fetchReminders = async () => {
-    try {
-      const response = await api.get('/student/reminders', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setReminders(response.data || []);
-    } catch (error) {
-      console.log('No reminders found or error fetching reminders');
-      setReminders([]);
-    }
-  };
-
-  const addNote = async (e) => {
-    e.preventDefault();
-    if (!newNote.trim()) return;
-
+    const userMsg = { role: 'user', content: prompt, timestamp: new Date() };
+    setMessages(prev => [...prev, userMsg]);
+    setInput('');
     setLoading(true);
+
     try {
-      const response = await api.post('/student/notes', 
-        { content: newNote },
+      const res = await api.post('/student/study-bot',
+        { prompt },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setNotes([...notes, response.data]);
-      setNewNote('');
-    } catch (error) {
-      console.error('Error adding note:', error);
+      const answer = res.data.answer || 'Sorry, I could not get a response.';
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: answer,
+        timestamp: new Date(),
+        source: res.data.source,
+      }]);
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Sorry, something went wrong. Please try again.',
+        timestamp: new Date(),
+      }]);
     } finally {
       setLoading(false);
+      inputRef.current?.focus();
     }
   };
 
-  const addReminder = async (e) => {
-    e.preventDefault();
-    if (!newReminder.trim() || !reminderDate) return;
-
-    setLoading(true);
-    try {
-      const response = await api.post('/student/reminders', 
-        { 
-          content: newReminder, 
-          dueDate: reminderDate 
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setReminders([...reminders, response.data]);
-      setNewReminder('');
-      setReminderDate('');
-    } catch (error) {
-      console.error('Error adding reminder:', error);
-    } finally {
-      setLoading(false);
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
     }
   };
 
-  const deleteNote = async (noteId) => {
-    try {
-      await api.delete(`/student/notes/${noteId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setNotes(notes.filter(note => note._id !== noteId));
-    } catch (error) {
-      console.error('Error deleting note:', error);
-    }
-  };
-
-  const deleteReminder = async (reminderId) => {
-    try {
-      await api.delete(`/student/reminders/${reminderId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setReminders(reminders.filter(reminder => reminder._id !== reminderId));
-    } catch (error) {
-      console.error('Error deleting reminder:', error);
-    }
+  const clearChat = () => {
+    setMessages([{
+      role: 'assistant',
+      content: "Chat cleared! How can I help you study today? 🎓",
+      timestamp: new Date(),
+    }]);
   };
 
   return (
-    <div className="max-w-4xl mx-auto mt-8 px-4">
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        {/* Header */}
-        <div className="bg-orange text-white p-6">
-          <div className="flex items-center space-x-3">
-            <div className="text-3xl">🤖</div>
-            <div>
-              <h1 className="text-2xl font-bold">Study Bot</h1>
-              <p className="text-orange-100">Your personal study assistant</p>
+    <div style={{
+      height: 'calc(100vh - 80px)',
+      display: 'flex',
+      flexDirection: 'column',
+      maxWidth: '860px',
+      margin: '0 auto',
+      padding: '16px',
+      fontFamily: "'Georgia', serif",
+    }}>
+      <style>{`
+        @keyframes bounce {
+          0%, 60%, 100% { transform: translateY(0); }
+          30% { transform: translateY(-6px); }
+        }
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        .send-btn:hover { transform: scale(1.05); background: linear-gradient(135deg, #4f46e5, #7c3aed) !important; }
+        .send-btn:active { transform: scale(0.97); }
+        .suggestion-btn:hover { background: #ede9fe !important; border-color: #6366f1 !important; transform: translateY(-1px); }
+        .clear-btn:hover { background: #fee2e2 !important; color: #ef4444 !important; }
+        textarea:focus { outline: none; }
+        .chat-input:focus { box-shadow: 0 0 0 3px rgba(99,102,241,0.15) !important; border-color: #6366f1 !important; }
+      `}</style>
+
+      {/* Header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
+        borderRadius: '16px 16px 0 0',
+        padding: '20px 24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: '0 4px 20px rgba(99,102,241,0.3)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{
+            width: '48px', height: '48px', borderRadius: '14px',
+            background: 'rgba(255,255,255,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '24px', backdropFilter: 'blur(10px)',
+          }}>🤖</div>
+          <div>
+            <h1 style={{ color: '#fff', fontSize: '20px', fontWeight: '700', margin: 0 }}>
+              AI Study Assistant
+            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+              <div style={{
+                width: '8px', height: '8px', borderRadius: '50%',
+                background: '#4ade80',
+                animation: 'pulse 2s infinite',
+              }} />
+              <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>
+                Online • Powered by AI
+              </span>
             </div>
           </div>
         </div>
+        <button
+          onClick={clearChat}
+          className="clear-btn"
+          style={{
+            background: 'rgba(255,255,255,0.15)',
+            border: '1px solid rgba(255,255,255,0.3)',
+            color: '#fff',
+            padding: '8px 14px',
+            borderRadius: '10px',
+            cursor: 'pointer',
+            fontSize: '13px',
+            transition: 'all 0.2s',
+          }}
+        >
+          🗑️ Clear
+        </button>
+      </div>
 
-        {/* Tabs */}
-        <div className="flex border-b">
+      {/* Messages */}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        padding: '20px',
+        background: '#fefeff',
+        borderLeft: '1px solid #e8e5ff',
+        borderRight: '1px solid #e8e5ff',
+      }}>
+        {messages.map((msg, i) => (
+          <Message key={i} msg={msg} />
+        ))}
+
+        {loading && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '16px' }}>
+            <div style={{
+              width: '36px', height: '36px', borderRadius: '50%',
+              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '16px', marginRight: '10px',
+            }}>🤖</div>
+            <div style={{
+              padding: '12px 16px',
+              background: '#f8f7ff',
+              borderRadius: '18px 18px 18px 4px',
+              border: '1px solid #e8e5ff',
+            }}>
+              <TypingDots />
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Suggestions */}
+      {messages.length <= 1 && (
+        <div style={{
+          padding: '12px 20px',
+          background: '#fafafe',
+          borderLeft: '1px solid #e8e5ff',
+          borderRight: '1px solid #e8e5ff',
+          display: 'flex',
+          gap: '8px',
+          overflowX: 'auto',
+        }}>
+          {SUGGESTIONS.map((s, i) => (
+            <button
+              key={i}
+              onClick={() => sendMessage(s)}
+              className="suggestion-btn"
+              style={{
+                whiteSpace: 'nowrap',
+                padding: '7px 14px',
+                borderRadius: '20px',
+                border: '1px solid #c7d2fe',
+                background: '#f5f3ff',
+                color: '#4f46e5',
+                fontSize: '12px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                flexShrink: 0,
+              }}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Input */}
+      <div style={{
+        padding: '16px 20px',
+        background: '#fff',
+        borderRadius: '0 0 16px 16px',
+        borderTop: '1px solid #e8e5ff',
+        border: '1px solid #e8e5ff',
+        boxShadow: '0 4px 20px rgba(99,102,241,0.08)',
+      }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask me anything about your studies... (Enter to send)"
+            rows={1}
+            className="chat-input"
+            style={{
+              flex: 1,
+              padding: '12px 16px',
+              borderRadius: '12px',
+              border: '1.5px solid #e0dcff',
+              fontSize: '14px',
+              fontFamily: 'inherit',
+              resize: 'none',
+              lineHeight: '1.5',
+              color: '#1e1b4b',
+              background: '#fafafe',
+              transition: 'all 0.2s',
+              maxHeight: '120px',
+              overflow: 'auto',
+            }}
+            onInput={e => {
+              e.target.style.height = 'auto';
+              e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+            }}
+            disabled={loading}
+          />
           <button
-            onClick={() => setActiveTab('notes')}
-            className={`flex-1 py-4 px-6 font-medium transition-colors ${
-              activeTab === 'notes' 
-                ? 'text-orange border-b-2 border-orange bg-orange/5' 
-                : 'text-gray-600 hover:text-orange'
-            }`}
+            onClick={() => sendMessage()}
+            disabled={loading || !input.trim()}
+            className="send-btn"
+            style={{
+              width: '46px', height: '46px',
+              borderRadius: '12px',
+              border: 'none',
+              background: loading || !input.trim()
+                ? '#c7d2fe'
+                : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              color: '#fff',
+              fontSize: '20px',
+              cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.2s',
+              flexShrink: 0,
+              boxShadow: loading || !input.trim() ? 'none' : '0 4px 12px rgba(99,102,241,0.4)',
+            }}
           >
-            📝 Notes
-          </button>
-          <button
-            onClick={() => setActiveTab('reminders')}
-            className={`flex-1 py-4 px-6 font-medium transition-colors ${
-              activeTab === 'reminders' 
-                ? 'text-orange border-b-2 border-orange bg-orange/5' 
-                : 'text-gray-600 hover:text-orange'
-            }`}
-          >
-            ⏰ Reminders
+            {loading ? '⏳' : '➤'}
           </button>
         </div>
-
-        {/* Content */}
-        <div className="p-6">
-          {activeTab === 'notes' ? (
-            <div>
-              {/* Add Note Form */}
-              <form onSubmit={addNote} className="mb-6">
-                <div className="flex space-x-3">
-                  <input
-                    type="text"
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    placeholder="Add a new note..."
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange focus:border-transparent"
-                    disabled={loading}
-                  />
-                  <button
-                    type="submit"
-                    disabled={loading || !newNote.trim()}
-                    className="bg-orange text-white px-6 py-2 rounded-lg hover:bg-orange-dark transition disabled:opacity-50"
-                  >
-                    {loading ? 'Adding...' : 'Add Note'}
-                  </button>
-                </div>
-              </form>
-
-              {/* Notes List */}
-              <div className="space-y-3">
-                {notes.length > 0 ? (
-                  notes.map((note) => (
-                    <div key={note._id} className="flex items-start justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex-1">
-                        <p className="text-gray-800">{note.content}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(note.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => deleteNote(note._id)}
-                        className="ml-3 text-red-500 hover:text-red-700 transition"
-                        title="Delete note"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <div className="text-lg mb-2">No notes yet</div>
-                    <div className="text-sm">Start adding your study notes above!</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div>
-              {/* Add Reminder Form */}
-              <form onSubmit={addReminder} className="mb-6">
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    value={newReminder}
-                    onChange={(e) => setNewReminder(e.target.value)}
-                    placeholder="Add a new reminder..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange focus:border-transparent"
-                    disabled={loading}
-                  />
-                  <div className="flex space-x-3">
-                    <input
-                      type="datetime-local"
-                      value={reminderDate}
-                      onChange={(e) => setReminderDate(e.target.value)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange focus:border-transparent"
-                      disabled={loading}
-                    />
-                    <button
-                      type="submit"
-                      disabled={loading || !newReminder.trim() || !reminderDate}
-                      className="bg-orange text-white px-6 py-2 rounded-lg hover:bg-orange-dark transition disabled:opacity-50"
-                    >
-                      {loading ? 'Adding...' : 'Add Reminder'}
-                    </button>
-                  </div>
-                </div>
-              </form>
-
-              {/* Reminders List */}
-              <div className="space-y-3">
-                {reminders.length > 0 ? (
-                  reminders.map((reminder) => (
-                    <div key={reminder._id} className="flex items-start justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex-1">
-                        <p className="text-gray-800">{reminder.content}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Due: {new Date(reminder.dueDate).toLocaleString()}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => deleteReminder(reminder._id)}
-                        className="ml-3 text-red-500 hover:text-red-700 transition"
-                        title="Delete reminder"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <div className="text-lg mb-2">No reminders yet</div>
-                    <div className="text-sm">Start adding your study reminders above!</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+        <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '8px', textAlign: 'center' }}>
+          Press Enter to send • Shift+Enter for new line
         </div>
       </div>
     </div>
   );
-} 
+}

@@ -45,9 +45,9 @@ app.use('/api/student/login', loginRateLimit);
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/student', require('./routes/student'));
+app.use('/api/student', require('./routes/studentRoutes'));
 app.use('/api/teacher', require('./routes/teacher'));
 app.use('/api/admin', require('./routes/admin'));
-
 app.use(errorHandler);
 
 module.exports = app;

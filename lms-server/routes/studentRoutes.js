@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateJWT } = require('../middleware/auth');
 const Note = require('../models/Note');
 const Reminder = require('../models/Reminder');
 
 // Study Bot routes
-router.get('/notes', authenticateToken, async (req, res) => {
+router.get('/notes', authenticateJWT, async (req, res) => {
   try {
     const notes = await Note.find({ student: req.user.id }).sort({ createdAt: -1 });
     res.json(notes);
@@ -14,7 +14,7 @@ router.get('/notes', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/notes', authenticateToken, async (req, res) => {
+router.post('/notes', authenticateJWT, async (req, res) => {
   try {
     const { content } = req.body;
     const note = new Note({
@@ -29,7 +29,7 @@ router.post('/notes', authenticateToken, async (req, res) => {
   }
 });
 
-router.delete('/notes/:id', authenticateToken, async (req, res) => {
+router.delete('/notes/:id', authenticateJWT, async (req, res) => {
   try {
     const note = await Note.findOneAndDelete({ 
       _id: req.params.id, 
@@ -44,7 +44,7 @@ router.delete('/notes/:id', authenticateToken, async (req, res) => {
   }
 });
 
-router.get('/reminders', authenticateToken, async (req, res) => {
+router.get('/reminders', authenticateJWT, async (req, res) => {
   try {
     const reminders = await Reminder.find({ student: req.user.id }).sort({ dueDate: 1 });
     res.json(reminders);
@@ -53,7 +53,7 @@ router.get('/reminders', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/reminders', authenticateToken, async (req, res) => {
+router.post('/reminders', authenticateJWT, async (req, res) => {
   try {
     const { content, dueDate } = req.body;
     const reminder = new Reminder({
@@ -69,7 +69,7 @@ router.post('/reminders', authenticateToken, async (req, res) => {
   }
 });
 
-router.delete('/reminders/:id', authenticateToken, async (req, res) => {
+router.delete('/reminders/:id', authenticateJWT, async (req, res) => {
   try {
     const reminder = await Reminder.findOneAndDelete({ 
       _id: req.params.id, 
