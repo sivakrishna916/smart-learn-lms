@@ -11,6 +11,9 @@ A full-stack **Learning Management System** built with React + Vite and Node.js 
 
 ## 📸 Screenshots
 
+<details>
+<summary>👆 Click to view screenshots</summary>
+
 ### Login
 ![Login](./screenshots/login.png)
 
@@ -35,6 +38,7 @@ A full-stack **Learning Management System** built with React + Vite and Node.js 
 ### Admin Dashboard
 ![Admin Dashboard](./screenshots/admin-dashboard.png)
 
+</details>
 ---
 
 ## ✨ Features
