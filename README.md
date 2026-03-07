@@ -1,124 +1,157 @@
-# 🎓 Smart Learn — Learning Management System (LMS)
+# 🎓 Smart Learn — Learning Management System
 
-A full-stack LMS built with **React + Vite** (frontend) and **Node.js + Express + MongoDB** (backend), supporting students, teachers, and admins.
+A full-stack **Learning Management System** built with React + Vite and Node.js + Express + MongoDB, supporting three user roles: Students, Teachers, and Admins. Features an AI-powered Study Bot using the Groq API (Llama 3.3 70B).
 
 ![React](https://img.shields.io/badge/React-18.2.0-blue)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green)
-![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-green)
-![Status](https://img.shields.io/badge/Status-Active-brightgreen)
+![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green)
+![License](https://img.shields.io/badge/License-ISC-yellow)
 
 ---
 
-## 📋 Table of Contents
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [How to Run Locally](#-how-to-run-locally)
-- [Environment Variables](#-environment-variables)
-- [Admin Bootstrap](#-admin-bootstrap)
-- [API Overview](#-api-overview)
-- [Security & Reliability Improvements](#-security--reliability-improvements)
-- [Testing](#-testing)
-- [Project Structure](#-project-structure)
-- [Roadmap](#-roadmap)
+## 📸 Screenshots
+
+### Login
+![Login](./screenshots/login.png)
+
+### Student Dashboard
+![Student Dashboard](./screenshots/student-dashboard.png)
+
+### AI Study Bot
+![Study Bot](./screenshots/study-bot.png)
+
+### Student Tests
+![Student Test](./screenshots/student-test.png)
+
+### Results
+![Results](./screenshots/results.png)
+
+### Teacher Dashboard
+![Teacher Dashboard](./screenshots/teacher-dashboard.png)
+
+### Teacher Test Management
+![Teacher Test](./screenshots/teacher-test.png)
+
+### Admin Dashboard
+![Admin Dashboard](./screenshots/admin-dashboard.png)
 
 ---
 
 ## ✨ Features
 
-### 🎯 Multi-role Authentication
-- Student registration/login flow
-- Teacher login and teacher-side management flow
-- Admin bootstrap + admin-only management routes
-- JWT-based access control and role checks
+### 🎯 Multi-Role Authentication
+- JWT-based login for Students, Teachers, and Admins
+- OTP email verification for password reset
+- Role-based route protection on both frontend and backend
 
-### 👨‍🎓 Student Capabilities
-- Dashboard and profile
-- Timetable and messages
-- Test discovery/submission/results flows
+### 👨‍🎓 Student
+- Dashboard with enrolled courses, resources and today's classes
+- Take MCQ and theory tests with timer
+- View results and performance summary
+- AI Study Bot powered by Groq (Llama 3.3 70B)
+- Notes and reminders
+- Timetable and messages from teachers
 
-### 👨‍🏫 Teacher Capabilities
-- Dashboard and course management
-- Test creation, publishing, grading, and results
-- Messaging and resource workflows
+### 👨‍🏫 Teacher
+- Dashboard with assigned subjects and class schedule
+- Create, publish and manage tests (MCQ + theory)
+- Grade theory submissions and give feedback
+- Upload course resources (PDF, image, video)
+- Messenger to communicate with students
+- View student performance summaries
 
-### 👨‍💼 Admin Capabilities
-- Teacher/student management
-- Course and timetable assignment
-- Monitoring endpoints
+### 👨‍💼 Admin
+- Create teacher accounts
+- Create courses and assign teachers
+- Enroll students into courses
+- Assign timetables
+- View all results across the platform
+- Monitor system stats (users, courses, timetables)
 
 ---
 
 ## 🛠 Tech Stack
 
-### Frontend (`lms-client`)
-- React 18
+### Frontend
+- React 18 + Vite
 - React Router DOM
 - Axios
 - Tailwind CSS
-- Vite
+- Framer Motion
 
-### Backend (`lms-server`)
-- Node.js + Express
+### Backend
+- Node.js + Express 5
 - MongoDB + Mongoose
-- JWT (`jsonwebtoken`)
-- Password hashing (`bcryptjs`)
-- File upload (`multer`)
-- Email (`nodemailer`)
+- JWT Authentication
+- bcryptjs
+- Multer (file uploads)
+- Nodemailer (OTP emails)
+- Groq SDK (AI Study Bot)
+
+### Security
+- MongoDB injection sanitization
+- Secure HTTP headers
+- Rate limiting on login endpoints
+- JWT identity binding (no client-trusted IDs)
+- Environment-gated debug endpoints
 
 ---
 
-## ⚡ How to Run Locally
+## ⚡ Getting Started
 
-### 1) Backend
+### 1. Clone the repo
+```bash
+git clone https://github.com/sivakrishna916/smart-learn-lms.git
+cd smart-learn-lms
+```
+
+### 2. Backend setup
 ```bash
 cd lms-server
 npm install
 cp .env.example .env
-# update .env with valid values (required: MONGO_URI, JWT_SECRET)
+# Fill in your MONGO_URI, JWT_SECRET, and GROQ_API_KEY in .env
+npm run setup-admin
 npm run dev
 ```
 
-Backend URL: `http://localhost:5000`  
-Health check: `GET /health`
+Backend runs on: `http://localhost:5000`
 
-### 2) Frontend
+### 3. Frontend setup
 ```bash
 cd lms-client
 npm install
 cp .env.example .env
+# Set VITE_API_BASE_URL=http://localhost:5000/api
 npm run dev
 ```
 
-Frontend URL: `http://localhost:5173`
+Frontend runs on: `http://localhost:5173`
 
 ---
 
 ## 🔐 Environment Variables
 
 ### `lms-server/.env`
-**Required**
-- `MONGO_URI`
-- `JWT_SECRET`
-
-**Optional**
-- `PORT` (default: `5000`)
-- `NODE_ENV` (default: `development`)
-- `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASS`
-- `ENABLE_DEBUG_ENDPOINTS` (`true`/`false`, default: `false`)
-- `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (for setup-admin script)
+```
+PORT=5000
+NODE_ENV=development
+MONGO_URI=your_mongodb_atlas_uri
+JWT_SECRET=your_jwt_secret
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_app_password
+GROQ_API_KEY=your_groq_api_key
+ENABLE_DEBUG_ENDPOINTS=false
+ADMIN_NAME=Your Name
+ADMIN_EMAIL=your_email@gmail.com
+ADMIN_PASSWORD=your_password
+```
 
 ### `lms-client/.env`
-- `VITE_API_BASE_URL` (example: `http://localhost:5000/api`)
-
----
-
-## 👑 Admin Bootstrap
-
-To create the first admin via script:
-```bash
-cd lms-server
-# ensure ADMIN_EMAIL and ADMIN_PASSWORD exist in .env
-npm run setup-admin
+```
+VITE_API_BASE_URL=http://localhost:5000/api
 ```
 
 ---
@@ -126,94 +159,84 @@ npm run setup-admin
 ## 📚 API Overview
 
 ### Auth
-- `POST /api/auth/login`
-- `POST /api/auth/register`
-- `POST /api/auth/forgot-password`
-- `POST /api/auth/reset-password`
-- `POST /api/auth/change-password` (authenticated)
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| POST | `/api/auth/login` | Public |
+| POST | `/api/auth/register` | Public |
+| POST | `/api/auth/forgot-password` | Public |
+| POST | `/api/auth/reset-password` | Public |
+| POST | `/api/auth/change-password` | Authenticated |
 
 ### Student
-- `POST /api/student/register`
-- `POST /api/student/login`
-- `POST /api/student/forgot-password`
-- `POST /api/student/reset-password`
-- `POST /api/student/verify-otp`
-- `GET /api/student/dashboard` (student auth)
-- `GET /api/student/profile` (student auth)
-- `GET /api/student/study-bot` (student auth)
-- `GET /api/student/timetable` (student auth)
-- `GET /api/student/messages` (student auth)
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| GET | `/api/student/dashboard` | Student |
+| GET | `/api/student/profile` | Student |
+| GET/POST | `/api/student/study-bot` | Student |
+| GET | `/api/student/timetable` | Student |
+| GET | `/api/student/notes` | Student |
+| GET | `/api/student/reminders` | Student |
 
 ### Teacher
-- `POST /api/teacher/login`
-- `POST /api/teacher/forgot-password`
-- `POST /api/teacher/reset-password`
-- `POST /api/teacher/verify-otp`
-- `GET /api/teacher/student-tests` (auth)
-- `POST /api/teacher/submit-test` (student auth)
-- `GET /api/teacher/student-results` (auth)
-- Additional teacher/admin-protected routes for courses, tests, and messaging
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| POST | `/api/teacher/create-test` | Teacher |
+| POST | `/api/teacher/publish-test` | Teacher |
+| GET | `/api/teacher/tests` | Teacher |
+| POST | `/api/teacher/grade-submission` | Teacher |
+| GET | `/api/teacher/results` | Teacher |
 
 ### Admin
-- `POST /api/admin/create-first-admin` (public bootstrap)
-- All other `/api/admin/*` routes are admin-only
-- Debug routes (`/api/admin/test`, `/api/admin/test-create`) load only when `ENABLE_DEBUG_ENDPOINTS=true`
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| POST | `/api/admin/create-teacher` | Admin |
+| POST | `/api/admin/courses` | Admin |
+| POST | `/api/admin/assign-course` | Admin |
+| POST | `/api/admin/assign-timetable` | Admin |
+| GET | `/api/admin/monitor` | Admin |
 
 ---
 
-## 🛡 Security & Reliability Improvements
-- Admin routes protected with JWT + `authorizeRoles('admin')` (except first-admin bootstrap)
-- Debug admin endpoints env-gated
-- Password change endpoint bound to authenticated user identity
-- Startup env validation for critical config
-- Degraded startup mode support when DB is unavailable, with health endpoint visibility
-- Added backend smoke tests for core auth/authorization boundaries
+## 🧪 Running Tests
 
----
-
-## ✅ Testing
-
-Backend smoke tests:
 ```bash
 cd lms-server
 npm test
-```
-
-Frontend build check:
-```bash
-cd lms-client
-npm run build
 ```
 
 ---
 
 ## 📁 Project Structure
 
-```text
+```
 smart-learn-lms/
 ├── lms-client/
 │   ├── src/
+│   │   ├── pages/
+│   │   │   ├── admin/
+│   │   │   ├── teacher/
+│   │   │   ├── student/
+│   │   │   └── auth/
+│   │   ├── components/
+│   │   ├── context/
+│   │   └── routes/
 │   └── package.json
 ├── lms-server/
 │   ├── controllers/
 │   ├── middleware/
 │   ├── models/
 │   ├── routes/
+│   ├── utils/
 │   ├── config/
 │   ├── test/
-│   ├── app.js
-│   ├── index.js
 │   └── package.json
-├── LMS_Project_Documentation.md
-├── INTERVIEW_NOTES.md
-└── README.md
+└── screenshots/
 ```
 
 ---
 
-## 📈 Roadmap
-- Improve integration/e2e coverage
-- Add CI pipeline for lint/test/build on PRs
-- Add deployment guide and environment profiles
-- Add observability/logging improvements
-
+## 🗺 Roadmap
+- [ ] Deploy to Render + Vercel
+- [ ] Add CI pipeline for lint/test/build
+- [ ] Improve integration test coverage
+- [ ] Add real-time notifications
