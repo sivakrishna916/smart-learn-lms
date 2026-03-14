@@ -8,7 +8,7 @@ const noteSchema = new mongoose.Schema({
   },
   student: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Student',
+    ref: 'User',
     required: true
   },
   createdAt: {
