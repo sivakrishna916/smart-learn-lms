@@ -17,6 +17,9 @@ router.get('/notes', authenticateJWT, async (req, res) => {
 router.post('/notes', authenticateJWT, async (req, res) => {
   try {
     const { content } = req.body;
+    if (!content || content.trim() === '') {
+      return res.status(400).json({ message: 'Note content is required' });
+    }
     const note = new Note({
       content,
       student: req.user.id,
@@ -56,6 +59,12 @@ router.get('/reminders', authenticateJWT, async (req, res) => {
 router.post('/reminders', authenticateJWT, async (req, res) => {
   try {
     const { content, dueDate } = req.body;
+    if (!content || content.trim() === '') {
+      return res.status(400).json({ message: 'Reminder content is required' });
+    }
+    if (!dueDate) {
+      return res.status(400).json({ message: 'Due date is required' });
+    }
     const reminder = new Reminder({
       content,
       dueDate,
@@ -84,4 +93,4 @@ router.delete('/reminders/:id', authenticateJWT, async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;
