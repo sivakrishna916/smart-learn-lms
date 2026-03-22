@@ -34,6 +34,9 @@ router.post('/notes', authenticateJWT, async (req, res) => {
 
 router.delete('/notes/:id', authenticateJWT, async (req, res) => {
   try {
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: 'Invalid note ID' });
+    }
     const note = await Note.findOneAndDelete({ 
       _id: req.params.id, 
       student: req.user.id 
@@ -47,12 +50,21 @@ router.delete('/notes/:id', authenticateJWT, async (req, res) => {
   }
 });
 
-router.get('/reminders', authenticateJWT, async (req, res) => {
+router.delete('/reminders/:id', authenticateJWT, async (req, res) => {
   try {
-    const reminders = await Reminder.find({ student: req.user.id }).sort({ dueDate: 1 });
-    res.json(reminders);
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: 'Invalid reminder ID' });
+    }
+    const reminder = await Reminder.findOneAndDelete({ 
+      _id: req.params.id, 
+      student: req.user.id 
+    });
+    if (!reminder) {
+      return res.status(404).json({ message: 'Reminder not found' });
+    }
+    res.json({ message: 'Reminder deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching reminders' });
+    res.status(500).json({ message: 'Error deleting reminder' });
   }
 });
 
