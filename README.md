@@ -133,6 +133,28 @@ npm run dev
 Frontend runs on: `http://localhost:5173`
 
 ---
+## 🏥 Health Check
+
+The backend exposes a health endpoint to check server and database status:
+```
+GET http://localhost:5000/health
+```
+
+Response when healthy:
+```json
+{
+  "status": "ok",
+  "database": "connected"
+}
+```
+
+Response when database is down:
+```json
+{
+  "status": "degraded",
+  "database": "disconnected"
+}
+```
 
 ## 🔐 Environment Variables
 
